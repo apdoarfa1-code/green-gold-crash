@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Gold Cloud - كاشف الرقم القادم</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Cairo', sans-serif; }
+        body { background-color: #0E1117; color: #FFFFFF; }
+        .gold-gradient { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .green-gradient { background: linear-gradient(135deg, #00FF7F 0%, #00BFFF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card-bg { background-color: #161B22; border: 1px solid #21262D; }
+        .card-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 127, 0.4); } 70% { box-shadow: 0 0 0 12px rgba(0, 255, 127, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 127, 0); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="max-w-4xl mx-auto w-full flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+        <div class="flex items-center space-x-3 space-x-reverse">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/50">
+                <i class="fa-solid fa-plane-departure text-emerald-400 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black gold-gradient">Green Gold Engine</h1>
+                <p class="text-xs text-gray-400">النظام السحابي المعتمد بدقة Provably Fair (7 ثوانٍ)</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-emerald-950/40 text-emerald-400 border border-emerald-800/50 px-3 py-1.5 rounded-full text-xs font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span id="server-status">خادم Vercel متصل</span>
+        </div>
+    </header>
+
+    <!-- Main Live Container -->
+    <main class="max-w-4xl mx-auto w-full space-y-6">
+
+        <!-- Top Status Banner -->
+        <div class="card-bg rounded-2xl p-6 shadow-2xl relative overflow-hidden card-pulse">
+            <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-emerald-400 to-amber-500"></div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <!-- Countdown Metric -->
+                <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800">
+                    <p class="text-xs font-bold text-gray-400 mb-1">
+                        <i class="fa-solid fa-stopwatch text-amber-400 ml-1"></i>
+                        العداد التنازلي للإقلاع
+                    </p>
+                    <div id="countdown-val" class="text-4xl font-black text-amber-400">00:07</div>
+                    <p class="text-[10px] text-gray-500 mt-1">دورة 7 ثوانٍ حقيقية</p>
+                </div>
+
+                <!-- Next Target Metric -->
+                <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800">
+                    <p class="text-xs font-bold text-gray-400 mb-1">
+                        <i class="fa-solid fa-crosshairs text-emerald-400 ml-1"></i>
+                        الرقم القادم (المستهدف)
+                    </p>
+                    <div id="next-mult-val" class="text-4xl font-black green-gradient">2.45x</div>
+                    <p class="text-[10px] text-gray-500 mt-1">ثابت طوال هذه الجولة</p>
+                </div>
+
+                <!-- Safe Cashout Metric -->
+                <div class="p-4 rounded-xl bg-gray-900/60 border border-gray-800">
+                    <p class="text-xs font-bold text-gray-400 mb-1">
+                        <i class="fa-solid fa-shield-halved text-cyan-400 ml-1"></i>
+                        نقطة السحب الآمن
+                    </p>
+                    <div id="safe-cashout-val" class="text-4xl font-black text-cyan-400">2.01x</div>
+                    <p class="text-[10px] text-gray-500 mt-1">توصية 82% لتفادي الانهيار</p>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-800 h-2.5 rounded-full mt-6 overflow-hidden">
+                <div id="progress-bar" class="bg-gradient-to-r from-emerald-400 to-amber-400 h-full w-full transition-all duration-300"></div>
+            </div>
+
+            <!-- Alert Banner -->
+            <div id="alert-banner" class="mt-4 p-3 rounded-lg bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-2">
+                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                <span id="alert-msg">🎯 الرقم القادم جاهز ومحسوب بدقة HMAC-SHA256: 2.45x</span>
+            </div>
+        </div>
+
+        <!-- History & Verification Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Recent Rounds Table -->
+            <div class="card-bg rounded-2xl p-5 border border-gray-800">
+                <h3 class="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-emerald-400"></i>
+                    سجل الجولات السابقة الحقيقية
+                </h3>
+                <div class="overflow-x-auto max-h-64">
+                    <table class="w-full text-right text-xs text-gray-300">
+                        <thead class="text-gray-400 bg-gray-900/80 border-b border-gray-800">
+                            <tr>
+                                <th class="p-2">رقم الجولة</th>
+                                <th class="p-2">المضاعف</th>
+                                <th class="p-2">التوقيت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-rows" class="divide-y divide-gray-800">
+                            <tr><td colspan="3" class="text-center p-4 text-gray-500">جاري تحميل السجل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Provably Fair Verifier Calculator -->
+            <div class="card-bg rounded-2xl p-5 border border-gray-800">
+                <h3 class="text-sm font-bold text-gray-300 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-amber-400"></i>
+                    حاسبة تدقيق النزاهة التشفيرية
+                </h3>
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Server Seed (المفتاح المشفر)</label>
+                        <input id="input-sseed" type="text" value="green_gold_master_provably_fair_seed_2026" class="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Client Seed (مفتاح العميل)</label>
+                        <input id="input-cseed" type="text" value="green_gold_client_seed_2026" class="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Nonce (رقم المحاولة)</label>
+                        <input id="input-nonce" type="number" value="10" class="w-full bg-gray-900 border border-gray-800 rounded p-2 text-gray-200 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <button onclick="verifyHMAC()" class="w-full bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-black font-bold py-2 rounded shadow text-xs transition-all">
+                        تدقيق HMAC-SHA256
+                    </button>
+                    <div id="verify-result" class="hidden p-2 rounded bg-gray-900/90 text-emerald-400 font-mono text-[11px] break-all border border-gray-800"></div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-4xl mx-auto w-full text-center text-xs text-gray-500 mt-8 pt-4 border-t border-gray-800">
+        <p>© 2026 Green Gold Engineering System - جميع الحقوق محفوظة للدراسة الإحصائية والأكاديمية</p>
+    </footer>
+
+    <!-- Synchronized Live JavaScript -->
+    <script>
+        async function updateLiveState() {
+            try {
+                const res = await fetch('/api/current');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('countdown-val').innerText = `00:0${data.countdown}`;
+                    document.getElementById('next-mult-val').innerText = `${data.current_multiplier.toFixed(2)}x`;
+                    document.getElementById('safe-cashout-val').innerText = `${data.safe_cashout.toFixed(2)}x`;
+                    
+                    const pct = ((8 - data.countdown) / 7.0) * 100;
+                    document.getElementById('progress-bar').style.width = `${pct}%`;
+
+                    if (data.countdown > 1) {
+                        document.getElementById('alert-msg').innerText = `⏳ مرحلة الرهان مفتوحة (${data.countdown}s) — الرقم القادم للجولة ${data.round_id}: ${data.current_multiplier.toFixed(2)}x`;
+                    } else {
+                        document.getElementById('alert-msg').innerText = `🚀 إقلاع وشيك للطائرة الآن! التنبؤ الثابت: ${data.current_multiplier.toFixed(2)}x`;
+                    }
+                    document.getElementById('server-status').innerText = 'خادم Vercel متصل';
+                }
+            } catch (err) {
+                document.getElementById('server-status').innerText = 'أوفلاين';
+            }
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/latest?count=10');
+                if (res.ok) {
+                    const rounds = await res.json();
+                    let html = '';
+                    rounds.forEach(r => {
+                        const timeStr = new Date(r.timestamp).toLocaleTimeString('ar-EG');
+                        html += `
+                            <tr class="hover:bg-gray-900/50 transition">
+                                <td class="p-2 font-mono text-gray-400">${r.round_id}</td>
+                                <td class="p-2 font-bold text-emerald-400">${r.multiplier.toFixed(2)}x</td>
+                                <td class="p-2 text-gray-500">${timeStr}</td>
+                            </tr>
+                        `;
+                    });
+                    document.getElementById('history-rows').innerHTML = html;
+                }
+            } catch (err) {}
+        }
+
+        async function verifyHMAC() {
+            const server_seed = document.getElementById('input-sseed').value;
+            const client_seed = document.getElementById('input-cseed').value;
+            const nonce = parseInt(document.getElementById('input-nonce').value);
+
+            try {
+                const res = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({server_seed, client_seed, nonce})
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const el = document.getElementById('verify-result');
+                    el.classList.remove('hidden');
+                    el.innerHTML = `
+                        ✅ النتيجة المطابقة: <b>${data.verified_multiplier}x</b><br>
+                        🔑 التوقيع: ${data.hash_signature}
+                    `;
+                }
+            } catch (err) {}
+        }
+
+        // Interval Loop
+        setInterval(updateLiveState, 300);
+        setInterval(fetchHistory, 3000);
+        updateLiveState();
+        fetchHistory();
+    </script>
+</body>
+</html>
