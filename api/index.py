@@ -66,12 +66,34 @@ class CurrentStateSchema(BaseModel):
 
 
 @app.get("/api/health")
-def health():
+def health(lang: Optional[str] = Query(default=None)):
     now = time.time()
+    ts = datetime.now(timezone.utc).isoformat()
+    epoch = int(now // CYCLE_DURATION)
+    
+    if lang == "ar":
+        return {
+            "الحالة": "صحي",
+            "الخدمة": "Green Gold Cloud (Vercel Serverless)",
+            "الطابع الزمني": ts,
+            "epoch": epoch
+        }
+    
     return {
         "status": "healthy",
         "service": "Green Gold Cloud (Vercel Serverless)",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": ts,
+        "epoch": epoch
+    }
+
+
+@app.get("/api/health/ar")
+def health_ar():
+    now = time.time()
+    return {
+        "الحالة": "صحي",
+        "الخدمة": "Green Gold Cloud (Vercel Serverless)",
+        "الطابع الزمني": datetime.now(timezone.utc).isoformat(),
         "epoch": int(now // CYCLE_DURATION)
     }
 
