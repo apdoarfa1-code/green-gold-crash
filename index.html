@@ -35,7 +35,7 @@
         </div>
         <div class="flex items-center gap-2 bg-emerald-950/40 text-emerald-400 border border-emerald-800/50 px-3 py-1.5 rounded-full text-xs font-semibold">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span id="server-status">خادم Vercel متصل</span>
+            <span id="server-status">خادم متصل</span>
         </div>
     </header>
 
@@ -86,7 +86,7 @@
             <!-- Alert Banner -->
             <div id="alert-banner" class="mt-4 p-3 rounded-lg bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-2">
                 <i class="fa-solid fa-circle-check text-emerald-400"></i>
-                <span id="alert-msg">🎯 الرقم القادم جاهز ومحسوب بدقة HMAC-SHA256: 2.45x</span>
+                <span id="alert-msg">🎯 الرقم القادم جاهز ومحسوب بدقة HMAC-SHA256</span>
             </div>
         </div>
 
@@ -169,7 +169,7 @@
                     } else {
                         document.getElementById('alert-msg').innerText = `🚀 إقلاع وشيك للطائرة الآن! التنبؤ الثابت: ${data.current_multiplier.toFixed(2)}x`;
                     }
-                    document.getElementById('server-status').innerText = 'خادم Vercel متصل';
+                    document.getElementById('server-status').innerText = 'متصل';
                 }
             } catch (err) {
                 document.getElementById('server-status').innerText = 'أوفلاين';
@@ -220,7 +220,6 @@
             } catch (err) {}
         }
 
-        // Interval Loop
         setInterval(updateLiveState, 300);
         setInterval(fetchHistory, 3000);
         updateLiveState();

@@ -29,4 +29,7 @@ class RedisCache:
         return [json.loads(item) for item in items]
 
     async def close(self):
-        await self.client.close()
+        if hasattr(self.client, "aclose"):
+            await self.client.aclose()
+        else:
+            await self.client.close()

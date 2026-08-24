@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
 from src.storage.postgres.models import RoundModel
@@ -13,7 +13,7 @@ class DataRetentionManager:
         self.retention_days = retention_days
 
     async def prune_old_rounds(self) -> int:
-        cutoff_date = datetime.utcnow() - timedelta(days=self.retention_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.retention_days)
         stmt = delete(RoundModel).where(RoundModel.timestamp < cutoff_date)
         result = await self.session.execute(stmt)
         await self.session.commit()

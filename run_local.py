@@ -2,7 +2,10 @@ import subprocess
 import time
 import webbrowser
 import sys
-import os
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 
 def run_local():
     print("==================================================")
@@ -13,7 +16,7 @@ def run_local():
     print("[1/3] Starting FastAPI Backend on http://localhost:8000 ...")
     backend_process = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8000"],
-        cwd="/home/apdo/Desktop/كراش/backend"
+        cwd=str(PROJECT_ROOT / "backend")
     )
 
     # Wait for backend to boot up
@@ -23,7 +26,7 @@ def run_local():
     print("[2/3] Starting Streamlit Dashboard on http://localhost:8501 ...")
     streamlit_process = subprocess.Popen(
         [sys.executable, "-m", "streamlit", "run", "dashboard/streamlit_app.py", "--server.port=8501", "--server.headless=true"],
-        cwd="/home/apdo/Desktop/كراش"
+        cwd=str(PROJECT_ROOT)
     )
 
     # Wait for streamlit to boot up
@@ -48,6 +51,7 @@ def run_local():
         backend_process.wait()
         streamlit_process.wait()
         print("All services stopped. Goodbye!")
+
 
 if __name__ == "__main__":
     run_local()

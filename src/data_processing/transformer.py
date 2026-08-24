@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 from config.constants import MultiplierCategory
 
@@ -25,5 +25,5 @@ class DataTransformer:
             "category": category,
             "is_above_two": multiplier >= 2.0,
             "is_above_ten": multiplier >= 10.0,
-            "processed_at": datetime.utcnow().isoformat(),
+            "processed_at": datetime.now(timezone.utc).isoformat(),
         }

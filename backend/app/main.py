@@ -20,11 +20,12 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, data: dict):
-        for connection in self.active_connections:
+        # Iterate over a snapshot to avoid mutation during broadcast
+        for connection in list(self.active_connections):
             try:
                 await connection.send_json(data)
             except Exception:
-                pass
+                self.disconnect(connection)
 
 
 manager = ConnectionManager()
@@ -40,13 +41,14 @@ async def game_round_generator():
     """Generates a new Provably Fair round every 7 seconds, strictly aligned to the wall clock."""
     global _ROUNDS
     import time
-    nonce = 0
-    
-    # Initialize some rounds on startup
-    for i in range(1, 11):
+    # Start nonce after the 10 seeded rounds to avoid duplicate round_ids
+    nonce = 11
+
+    # Initialize some rounds on startup (nonce 1..10)
+    for i in range(10, 0, -1):
         multiplier = ProvablyFairSimulator.generate_round(_SERVER_SEED, _CLIENT_SEED, i)
         _ROUNDS.append({
-            "id": i,
+            "id": 11 - i,
             "multiplier": multiplier,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "server_seed": _SERVER_SEED,

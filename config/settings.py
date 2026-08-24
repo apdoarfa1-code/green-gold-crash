@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    prometheus_port: int = 9090
+    prometheus_port: int = 8001
 
     # Application Logic
     cache_size: int = 100

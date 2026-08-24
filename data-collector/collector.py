@@ -69,7 +69,7 @@ async def run_collector():
         print("⚠️ No live data captured - Generating fallback round")
         uploader.upload_round({
             "round_id": f"rnd_fallback_{int(time.time())}",
-            "multiplier": round(random.exponential(1.5) + 1.0, 2),
+            "multiplier": round(random.expovariate(1.0 / 1.5) + 1.0, 2),
             "players_count": random.randint(100, 3000),
             "source": "fallback_simulation"
         })

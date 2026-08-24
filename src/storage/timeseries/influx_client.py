@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -34,7 +34,7 @@ class InfluxTimeSeriesClient:
                 .tag("source", round_data.get("source", "unknown"))
                 .field("multiplier", float(round_data.get("multiplier", 1.00)))
                 .field("players_count", int(round_data.get("players_count", 0)))
-                .time(datetime.utcnow())
+                .time(datetime.now(timezone.utc))
             )
             self.write_api.write(bucket=self.bucket, org=self.org, record=point)
         except Exception as e:
