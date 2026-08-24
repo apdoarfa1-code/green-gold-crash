@@ -154,21 +154,48 @@
     <script>
         async function updateLiveState() {
             try {
-                const res = await fetch('/api/current');
+                const res = await fetch('/api/current', {cache: 'no-store'});
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('countdown-val').innerText = `00:0${data.countdown}`;
-                    document.getElementById('next-mult-val').innerText = `${data.current_multiplier.toFixed(2)}x`;
+                    const isBetting = data.phase === 'betting';
+
+                    // العداد: أثناء الرهان يعرض الثواني، وأثناء الطيران يعرض مؤشر طيران
+                    document.getElementById('countdown-val').innerText = isBetting
+                        ? `00:0${data.countdown}`
+                        : '✈️';
+
+                    // الرقم المعروض: أثناء الطيران نعرض المضاعف الحي المتصاعد، وأثناء الرهان الرقم المستهدف
+                    const shown = isBetting ? data.current_multiplier : (data.live_multiplier || data.current_multiplier);
+                    document.getElementById('next-mult-val').innerText = `${shown.toFixed(2)}x`;
+                    document.getElementById('next-mult-val').style.animation = isBetting ? 'none' : 'pulse 0.5s infinite';
+
                     document.getElementById('safe-cashout-val').innerText = `${data.safe_cashout.toFixed(2)}x`;
-                    
-                    const pct = ((8 - data.countdown) / 7.0) * 100;
+
+                    // شريط التقدم: أثناء الرهان يمتلئ، وأثناء الطيران يمتلئ نسبة التقدم نحو التحطم
+                    let pct;
+                    if (isBetting) {
+                        pct = ((8 - data.countdown) / 7.0) * 100;
+                    } else {
+                        pct = Math.min(100, ((data.live_multiplier || 1) / data.current_multiplier) * 100);
+                    }
                     document.getElementById('progress-bar').style.width = `${pct}%`;
 
-                    if (data.countdown > 1) {
-                        document.getElementById('alert-msg').innerText = `⏳ مرحلة الرهان مفتوحة (${data.countdown}s) — الرقم القادم للجولة ${data.round_id}: ${data.current_multiplier.toFixed(2)}x`;
+                    const banner = document.getElementById('alert-banner');
+                    if (isBetting) {
+                        banner.style.background = 'rgba(6, 78, 59, 0.6)';
+                        banner.style.borderColor = 'rgba(6, 95, 70, 0.8)';
+                        document.getElementById('alert-msg').innerText = `⏳ مرحلة الرهان مفتوحة (${data.countdown}s) — الرقم المستهدف للجولة ${data.round_id}: ${data.current_multiplier.toFixed(2)}x`;
                     } else {
-                        document.getElementById('alert-msg').innerText = `🚀 إقلاع وشيك للطائرة الآن! التنبؤ الثابت: ${data.current_multiplier.toFixed(2)}x`;
+                        banner.style.background = 'rgba(120, 53, 15, 0.6)';
+                        banner.style.borderColor = 'rgba(180, 83, 9, 0.8)';
+                        document.getElementById('alert-msg').innerText = `🚀 الطائرة تحلق الآن! ${shown.toFixed(2)}x — التحطم عند: ${data.current_multiplier.toFixed(2)}x — اسحب قبل: ${data.safe_cashout.toFixed(2)}x`;
                     }
+                    document.getElementById('server-status').innerText = 'متصل';
+                }
+            } catch (err) {
+                document.getElementById('server-status').innerText = 'أوفلاين';
+            }
+        }
                     document.getElementById('server-status').innerText = 'خادم Vercel متصل';
                 }
             } catch (err) {

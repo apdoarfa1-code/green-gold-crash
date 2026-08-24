@@ -37,28 +37,19 @@ _SERVER_SEED = "green_gold_master_provably_fair_seed_2026"
 _CLIENT_SEED = "green_gold_client_seed_2026"
 
 
-import math
-
-def calculate_flight_time(multiplier: float) -> float:
-    """Calculates realistic Aviator flight time in seconds based on multiplier."""
-    if multiplier <= 1.00:
-        return 0.5
-    return round(math.log(multiplier) / 0.06, 2)
-
-
 async def game_round_generator():
-    """Generates Provably Fair rounds with DYNAMIC flight duration matching real Aviator physics."""
+    """Generates a new Provably Fair round every 7 seconds, strictly aligned to the wall clock."""
     global _ROUNDS
     import time
+    # Start nonce after the 10 seeded rounds to avoid duplicate round_ids
     nonce = 11
 
-    # Initialize some rounds on startup
+    # Initialize some rounds on startup (nonce 1..10)
     for i in range(10, 0, -1):
         multiplier = ProvablyFairSimulator.generate_round(_SERVER_SEED, _CLIENT_SEED, i)
         _ROUNDS.append({
             "id": 11 - i,
             "multiplier": multiplier,
-            "flight_time_sec": calculate_flight_time(multiplier),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "server_seed": _SERVER_SEED,
             "round_id": f"rnd_{i}"
@@ -67,11 +58,9 @@ async def game_round_generator():
     while True:
         nonce += 1
         multiplier = ProvablyFairSimulator.generate_round(_SERVER_SEED, _CLIENT_SEED, nonce)
-        flight_sec = calculate_flight_time(multiplier)
         new_round = {
             "id": len(_ROUNDS) + 1,
             "multiplier": multiplier,
-            "flight_time_sec": flight_sec,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "server_seed": _SERVER_SEED,
             "round_id": f"rnd_{nonce}"
@@ -81,9 +70,10 @@ async def game_round_generator():
             _ROUNDS.pop()
         await manager.broadcast({"event": "new_round", "data": new_round})
         
-        # Wait for Betting phase (5s) + Dynamic Flight Phase + Rest (2s)
-        total_round_duration = 5.0 + flight_sec + 2.0
-        await asyncio.sleep(total_round_duration)
+        # Wait until the next exact 7-second boundary
+        now = time.time()
+        sleep_time = 7.0 - (now % 7.0)
+        await asyncio.sleep(sleep_time)
 
 
 @asynccontextmanager
