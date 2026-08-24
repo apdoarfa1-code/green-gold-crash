@@ -19,9 +19,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import math
+
 SERVER_SEED = "green_gold_master_provably_fair_seed_2026"
 CLIENT_SEED = "green_gold_client_seed_2026"
-CYCLE_DURATION = 7.0
+BETTING_DURATION = 7.0          # فترة الرهان (7 ثواني ثابتة)
+GROWTH_RATE = 0.09              # معدل النمو الأسي للطائرة: m(t) = e^(0.09·t)
+TIMELINE_BASE = 1735689600.0    # نقطة ارتكاز زمنية ثابتة (كل العملاء متزامنون عليها)
+
+
+def flight_duration(crash_multiplier: float) -> float:
+    """مدة طيران الطائرة حتى الوصول لرقم التحطم (تنمو أسياً مثل اللعبة الحقيقية)."""
+    return math.log(crash_multiplier) / GROWTH_RATE
 
 
 def compute_provably_fair_multiplier(server_seed: str, client_seed: str, nonce: int, house_edge_pct: float = 1.0) -> float:
@@ -55,11 +64,71 @@ class RoundSchema(BaseModel):
     server_seed: str
 
 
+def walk_timeline(now: float):
+    """
+    يبني خطاً زمنياً حتمياً ومتزامناً لكل العملاء:
+    كل جولة = رهان 7 ثواني + طيران أسي حتى رقم التحطم.
+    يرجع (nonce, بداية الجولة, المضاعف, ثواني متبقية للرهان, مدة الطيران, المرحلة, المضاعف الحالي الحي).
+    """
+    cursor = TIMELINE_BASE
+    nonce = 1
+    while True:
+        crash = compute_provably_fair_multiplier(SERVER_SEED, CLIENT_SEED, nonce)
+        fly = flight_duration(crash)
+        bet_end = cursor + BETTING_DURATION
+        round_end = bet_end + fly
+        if now < round_end:
+            if now < bet_end:
+                countdown = max(1, math.ceil(bet_end - now))
+                return nonce, cursor, crash, countdown, fly, "betting", 1.00
+            else:
+                elapsed = now - bet_end
+                live = round(math.exp(GROWTH_RATE * elapsed), 2)
+                live = min(live, crash)
+                return nonce, cursor, crash, 0, fly, "flight", live
+        cursor = round_end
+        nonce += 1
+
+
+def get_latest_completed_rounds(count: int):
+    """يرجع آخر الجولات المكتملة (الفعلية) من الخط الزمني الحتمي."""
+    now = time.time()
+    nonce, start, crash, countdown, fly, phase, _ = walk_timeline(now)
+    rounds = []
+    cursor = start
+    n = nonce
+    # ارجع للخلف على الخط الزمني
+    while len(rounds) < count and n > 1:
+        n -= 1
+        c = compute_provably_fair_multiplier(SERVER_SEED, CLIENT_SEED, n)
+        f = flight_duration(c)
+        cursor_end = None
+        # الفرق الزمني: نهاية الجولة n هي بداية الجولة n+1
+        # نعيد بناء بالمشي الأمامي بدلاً من ذلك للدقة — لكننا نعرف بداية الجولة الحالية (start)
+        # start الحالي = نهاية الجولة السابقة، لذا نحتاج مشياً عكسياً:
+        # نهاية الجولة n = start (للأولى) ثم ننقص تدريجياً
+        if cursor_end is None:
+            cursor_end = start
+        round_start = cursor_end - (BETTING_DURATION + f)
+        ts = datetime.fromtimestamp(round_start, tz=timezone.utc).isoformat()
+        rounds.append(RoundSchema(
+            id=n,
+            round_id=f"rnd_{n}",
+            multiplier=c,
+            timestamp=ts,
+            server_seed=SERVER_SEED
+        ))
+        cursor_end = round_start
+    return rounds
+
+
 class CurrentStateSchema(BaseModel):
     cycle_epoch: int
     countdown: int
     phase: str
     current_multiplier: float
+    live_multiplier: float = 1.00
+    flight_duration: float = 0.0
     safe_cashout: float
     round_id: str
     confidence: float
@@ -138,8 +207,9 @@ def render_health_html(data_dict: dict) -> str:
 @app.get("/api/health")
 def health(request: Request, lang: Optional[str] = Query(default=None)):
     now = time.time()
+    nonce, start, crash, countdown, fly, phase, live = walk_timeline(now)
     ts = datetime.now(timezone.utc).isoformat()
-    epoch = int(now // CYCLE_DURATION)
+    epoch = nonce
     
     if lang == "ar":
         data = {
@@ -166,11 +236,12 @@ def health(request: Request, lang: Optional[str] = Query(default=None)):
 @app.get("/api/health/ar")
 def health_ar(request: Request):
     now = time.time()
+    nonce, *_ = walk_timeline(now)
     data = {
         "الحالة": "صحي",
         "الخدمة": "Green Gold Cloud (Vercel Serverless)",
         "الطابع الزمني": datetime.now(timezone.utc).isoformat(),
-        "epoch": int(now // CYCLE_DURATION)
+        "epoch": nonce
     }
     accept = request.headers.get("accept", "")
     if "text/html" in accept:
@@ -181,25 +252,23 @@ def health_ar(request: Request):
 
 @app.get("/api/current", response_model=CurrentStateSchema)
 def get_current_state():
-    now = time.time()
-    cycle_epoch = int(now // CYCLE_DURATION)
-    time_in_cycle = now % CYCLE_DURATION
-    countdown = int(CYCLE_DURATION - time_in_cycle) + 1
-    countdown = max(1, min(7, countdown))
-    
-    multiplier = compute_provably_fair_multiplier(SERVER_SEED, CLIENT_SEED, cycle_epoch)
+    nonce, start, crash, countdown, fly, phase, live = walk_timeline(time.time())
+
+    multiplier = crash
     safe_cashout = round(max(1.10, multiplier * 0.82), 2)
-    
-    # Calculate confidence based on probability distribution
+
+    # درجة الثقة: تقل كلما ارتفع رقم التحطم المستهدف
     confidence = round(max(65.0, min(95.0, 90.0 - (multiplier * 1.5))), 1)
-    
+
     return CurrentStateSchema(
-        cycle_epoch=cycle_epoch,
+        cycle_epoch=nonce,
         countdown=countdown,
-        phase="betting" if countdown > 1 else "launch",
+        phase=phase,
         current_multiplier=multiplier,
+        live_multiplier=live,
+        flight_duration=round(fly, 2),
         safe_cashout=safe_cashout,
-        round_id=f"rnd_{cycle_epoch}",
+        round_id=f"rnd_{nonce}",
         confidence=confidence,
         server_seed=SERVER_SEED,
         client_seed=CLIENT_SEED
@@ -208,22 +277,7 @@ def get_current_state():
 
 @app.get("/api/latest", response_model=List[RoundSchema])
 def get_latest_rounds(count: int = Query(default=20, le=50)):
-    now = time.time()
-    current_epoch = int(now // CYCLE_DURATION)
-    
-    rounds = []
-    for i in range(count):
-        epoch = current_epoch - i
-        mult = compute_provably_fair_multiplier(SERVER_SEED, CLIENT_SEED, epoch)
-        dt = datetime.fromtimestamp(epoch * CYCLE_DURATION, tz=timezone.utc).isoformat()
-        rounds.append(RoundSchema(
-            id=epoch,
-            round_id=f"rnd_{epoch}",
-            multiplier=mult,
-            timestamp=dt,
-            server_seed=SERVER_SEED
-        ))
-    return rounds
+    return get_latest_completed_rounds(count)
 
 
 class VerifyRequest(BaseModel):
